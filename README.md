@@ -1,1 +1,1 @@
-# aoc-2023
+`npx ts-node ${path.ts}`
