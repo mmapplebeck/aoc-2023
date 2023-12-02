@@ -1,4 +1,11 @@
-import { findPossibleGames, getGames, getPart1 } from ".";
+import {
+  findMaxCountsFromGames,
+  findPossibleGames,
+  getGames,
+  getPart1,
+  getPart2,
+  powerCount,
+} from ".";
 
 describe("Day 2", () => {
   const exampleInput = [
@@ -130,6 +137,50 @@ describe("Day 2", () => {
   describe("getPart1", () => {
     it("gets the sum of the ids of the possible games", () => {
       expect(getPart1(exampleInput, { red: 12, green: 13, blue: 14 })).toBe(8);
+    });
+  });
+
+  describe("findMaxCountsFromGames", () => {
+    expect(findMaxCountsFromGames(getGames(exampleInput))).toStrictEqual([
+      {
+        red: 4,
+        green: 2,
+        blue: 6,
+      },
+      {
+        red: 1,
+        green: 3,
+        blue: 4,
+      },
+      {
+        red: 20,
+        green: 13,
+        blue: 6,
+      },
+      {
+        red: 14,
+        green: 3,
+        blue: 15,
+      },
+      {
+        red: 6,
+        green: 3,
+        blue: 2,
+      },
+    ]);
+  });
+
+  describe("powerCount", () => {
+    it("multiplies the count values", () => {
+      expect(
+        findMaxCountsFromGames(getGames(exampleInput)).map(powerCount)
+      ).toStrictEqual([48, 12, 1560, 630, 36]);
+    });
+  });
+
+  describe("getPart2", () => {
+    it("sums the powers", () => {
+      expect(getPart2(exampleInput)).toBe(2286);
     });
   });
 });

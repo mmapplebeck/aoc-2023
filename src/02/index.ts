@@ -51,10 +51,31 @@ export function findPossibleGames(games: Game[], totalCount: Count): Game[] {
   );
 }
 
+export function findMaxCountsFromGames(games: Game[]): Count[] {
+  return games.map(({ counts }) => {
+    return counts.reduce(
+      (acc, { red, green, blue }) => ({
+        red: Math.max(red, acc.red),
+        green: Math.max(green, acc.green),
+        blue: Math.max(blue, acc.blue),
+      }),
+      { red: 0, green: 0, blue: 0 }
+    );
+  });
+}
+
+export function powerCount({ red, green, blue }: Count): number {
+  return red * green * blue;
+}
+
 export function getPart1(input: string[], totalCount: Count): number {
   return sum(
     findPossibleGames(getGames(input), totalCount).map(({ id }) => id)
   );
 }
 
-console.log(getPart1(INPUT, { red: 12, green: 13, blue: 14 }));
+export function getPart2(input: string[]): number {
+  return sum(findMaxCountsFromGames(getGames(input)).map(powerCount));
+}
+
+console.log(getPart1(INPUT, { red: 12, green: 13, blue: 14 }), getPart2(INPUT));
