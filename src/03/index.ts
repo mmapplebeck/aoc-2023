@@ -123,4 +123,36 @@ export function getPart1(input: string[]): number {
   );
 }
 
-console.log(getPart1(INPUT));
+function getStarAdjacentSchematicNumbers(
+  grid: Grid
+): Record<string, SchematicNumber[]> {
+  const AdjacentNumbersByStar: Record<string, SchematicNumber[]> = {};
+
+  getSchematicNumbers(grid).forEach((number) => {
+    const surroundingPositions = getSurroundingPositions(number);
+
+    for (const { row, column } of surroundingPositions) {
+      if (grid?.[row]?.[column] === "*") {
+        const key = `${row}_${column}`;
+
+        if (!AdjacentNumbersByStar[key]) {
+          AdjacentNumbersByStar[key] = [];
+        }
+
+        AdjacentNumbersByStar[key].push(number);
+      }
+    }
+  });
+
+  return AdjacentNumbersByStar;
+}
+
+export function getPart2(input: string[]): number {
+  return sum(
+    Object.values(getStarAdjacentSchematicNumbers(getGrid(input)))
+      .filter((numbers) => numbers.length === 2)
+      .map((numbers) => numbers[0].value * numbers[1].value)
+  );
+}
+
+console.log(getPart1(INPUT), getPart2(INPUT));
