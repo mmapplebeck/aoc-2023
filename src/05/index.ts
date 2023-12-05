@@ -1,8 +1,9 @@
+import chunk from "lodash/chunk";
 import { join } from "path";
 
 import { getRawInput } from "../utils";
 
-const INPUT = getRawInput(join(__dirname, "example-input.txt"));
+const INPUT = getRawInput(join(__dirname, "input.txt"));
 
 interface Conversion {
   destinationRangeStart: number;
@@ -10,31 +11,22 @@ interface Conversion {
   rangeLength: number;
 }
 
-const CONVERSION_TYPES = [
-  "seed-to-soil",
-  "soil-to-fertilizer",
-  "fertilizer-to-water",
-  "water-to-light",
-  "light-to-temperature",
-  "temperature-to-humidity",
-  "humidity-to-location",
-] as const;
-
-type ConversionType = (typeof CONVERSION_TYPES)[number];
-
-type ConversionsByType = Record<ConversionType, Conversion[]>;
-
-interface Almanac {
-  seeds: number[];
-  conversionsByType: ConversionsByType;
+interface SeedRange {
+  start: number;
+  end: number;
 }
 
-function getAlmanac(input: string): Almanac {
+interface Almanac {
+  seedRanges: SeedRange[];
+  conversions: Conversion[][];
+}
+
+function getAlmanac(input: string, useRanges = false): Almanac {
   const [seeds, ...mappings] = input.split("\n\n");
 
   return {
-    seeds: getSeeds(seeds),
-    conversionsByType: getConversionsByType(mappings),
+    seedRanges: getSeedRanges(seeds, useRanges),
+    conversions: getConversions(mappings),
   };
 }
 
@@ -50,61 +42,106 @@ function getConversion(input: string): Conversion {
   };
 }
 
-function getConversionsByType(input: string[]) {
-  return input.reduce((acc, mapping) => {
-    const [heading, ...conversions] = mapping.split("\n");
-
-    acc[heading.split(" ")[0] as ConversionType] =
-      conversions.map(getConversion);
-
-    return acc;
-  }, {} as ConversionsByType);
+function getConversions(mappings: string[]): Conversion[][] {
+  return mappings.map((mapping) =>
+    mapping.split("\n").slice(1).map(getConversion)
+  );
 }
 
-function getSeeds(input: string): number[] {
-  return input
+function getSeedRanges(input: string, useRanges: boolean): SeedRange[] {
+  const seeds = input
     .split(":")[1]
     .trim()
     .split(" ")
     .map((str) => Number(str));
+
+  if (!useRanges) {
+    return seeds.map((seed) => ({
+      start: seed,
+      end: seed,
+    }));
+  }
+
+  return chunk(seeds, 2).map(([start, count]) => ({
+    start,
+    end: start + count,
+  }));
 }
 
-function convert(
-  sourceRangeStart: number,
-  type: ConversionType,
-  almanac: Almanac
-) {
-  const conversion = almanac.conversionsByType[type].reduce((acc, c) => {
-    const withinRange =
-      sourceRangeStart >= c.sourceRangeStart &&
-      sourceRangeStart <= c.sourceRangeStart + c.rangeLength;
+function getSeedLocation(almanac: Almanac): number {
+  let minLocation = Infinity;
 
-    return withinRange ? c : acc;
-  }, undefined);
+  almanac.seedRanges.forEach(({ start, end }) => {
+    for (let seed = start; seed <= end; seed++) {
+      let value: number = seed;
 
-  return conversion
-    ? conversion.destinationRangeStart +
-        sourceRangeStart -
-        conversion.sourceRangeStart
-    : sourceRangeStart;
-}
+      almanac.conversions.forEach((conversion) => {
+        const matchingConversion = conversion.reduce((acc, c) => {
+          const withinRange =
+            value >= c.sourceRangeStart &&
+            value < c.sourceRangeStart + c.rangeLength;
 
-function getSeedLocations(almanac: Almanac): number[] {
-  return almanac.seeds.map((seed) => {
-    const soil = convert(seed, "seed-to-soil", almanac);
-    const fertilizer = convert(soil, "soil-to-fertilizer", almanac);
-    const water = convert(fertilizer, "fertilizer-to-water", almanac);
-    const light = convert(water, "water-to-light", almanac);
-    const temperature = convert(light, "light-to-temperature", almanac);
-    const humidity = convert(temperature, "temperature-to-humidity", almanac);
-    const location = convert(humidity, "humidity-to-location", almanac);
+          return withinRange ? c : acc;
+        }, undefined);
 
-    return location;
+        value = matchingConversion
+          ? matchingConversion.destinationRangeStart +
+            value -
+            matchingConversion.sourceRangeStart
+          : value;
+      });
+
+      minLocation = Math.min(minLocation, value);
+    }
   });
+
+  return minLocation;
+}
+
+function getSeedLocationBackwards(almanac: Almanac): number {
+  let location = 0;
+
+  const conversions = almanac.conversions.reverse();
+
+  while (location !== undefined) {
+    let value: number = location;
+
+    conversions.forEach((conversion) => {
+      const matchingConversion = conversion.reduce((acc, c) => {
+        const withinRange =
+          value >= c.destinationRangeStart &&
+          value < c.destinationRangeStart + c.rangeLength;
+
+        return withinRange ? c : acc;
+      }, undefined);
+
+      value = matchingConversion
+        ? matchingConversion.sourceRangeStart -
+          matchingConversion.destinationRangeStart +
+          value
+        : value;
+    });
+
+    if (
+      almanac.seedRanges.some(
+        ({ start, end }) => value >= start && value <= end
+      )
+    ) {
+      break;
+    }
+
+    location++;
+  }
+
+  return location;
 }
 
 function getPart1(input: string): number {
-  return Math.min(...getSeedLocations(getAlmanac(input)));
+  return getSeedLocation(getAlmanac(input));
 }
 
-console.log(getPart1(INPUT));
+function getPart2(input: string): number {
+  return getSeedLocationBackwards(getAlmanac(input, true));
+}
+
+console.log(getPart1(INPUT), getPart2(INPUT));
