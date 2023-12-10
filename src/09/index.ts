@@ -44,6 +44,17 @@ function predict(extrapolation: number[][]): number {
   return prediction;
 }
 
+function predictBackwards(extrapolation: number[][]): number {
+  const lastRow = extrapolation[extrapolation.length - 1];
+  let prediction = lastRow[0];
+
+  for (let i = extrapolation.length - 2; i >= 0; i--) {
+    prediction = extrapolation[i][0] - prediction;
+  }
+
+  return prediction;
+}
+
 function getHistories(input: string[]): number[][] {
   return input.map((line) => line.split(" ").map((str) => Number(str)));
 }
@@ -54,4 +65,10 @@ function getPart1(input: string[]) {
   );
 }
 
-console.log(getPart1(INPUT));
+function getPart2(input: string[]) {
+  return sum(
+    getHistories(input).map((history) => predictBackwards(extrapolate(history)))
+  );
+}
+
+console.log(getPart1(INPUT), getPart2(INPUT));
