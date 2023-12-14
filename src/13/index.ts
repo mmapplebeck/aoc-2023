@@ -14,12 +14,16 @@ function getPatterns(input: string): Pattern[] {
     .map((pattern) => pattern.split("\n").map((row) => row.split("")));
 }
 
-function getColMirrorIndex(pattern: Pattern): number {
-  return getRowMirrorIndex(zip(...pattern));
+function getColMirrorIndex(pattern: Pattern, ignore?: number): number {
+  return getRowMirrorIndex(zip(...pattern), ignore);
 }
 
-function getRowMirrorIndex(pattern: Pattern): number {
+function getRowMirrorIndex(pattern: Pattern, ignore?: number): number {
   for (let i = 0; i < pattern.length - 1; i++) {
+    if (i === ignore) {
+      continue;
+    }
+
     let l = i;
     let r = i + 1;
     let isMirror = true;
@@ -39,17 +43,51 @@ function getRowMirrorIndex(pattern: Pattern): number {
   return -1;
 }
 
-function scorePattern(pattern: Pattern): number {
+function scorePattern(pattern: Pattern, checkSmudge = false): number {
   const colMirrorIndex = getColMirrorIndex(pattern);
   const rowMirrorIndex = getRowMirrorIndex(pattern);
-  const colScore = colMirrorIndex !== -1 ? colMirrorIndex + 1 : 0;
-  const rowScore = rowMirrorIndex !== -1 ? 100 * (rowMirrorIndex + 1) : 0;
+  let finalColMirrorIndex = colMirrorIndex;
+  let finalRowMirrorIndex = rowMirrorIndex;
+  let foundSmudgeReflection = false;
+
+  if (checkSmudge) {
+    for (let i = 0; i < pattern.length; i++) {
+      for (let j = 0; j < pattern[i].length; j++) {
+        const original = pattern[i][j];
+
+        pattern[i][j] = original === "." ? "#" : ".";
+
+        const smudgeColMirrorIndex = getColMirrorIndex(pattern, colMirrorIndex);
+        const smudgeRowMirrorIndex = getRowMirrorIndex(pattern, rowMirrorIndex);
+
+        if (smudgeColMirrorIndex !== -1 || smudgeRowMirrorIndex !== -1) {
+          finalColMirrorIndex = smudgeColMirrorIndex;
+          finalRowMirrorIndex = smudgeRowMirrorIndex;
+          foundSmudgeReflection = true;
+          break;
+        }
+
+        pattern[i][j] = original;
+      }
+      if (foundSmudgeReflection) {
+        break;
+      }
+    }
+  }
+
+  const colScore = finalColMirrorIndex !== -1 ? finalColMirrorIndex + 1 : 0;
+  const rowScore =
+    finalRowMirrorIndex !== -1 ? 100 * (finalRowMirrorIndex + 1) : 0;
 
   return colScore + rowScore;
 }
 
 function getPart1(input: string): number {
-  return sum(getPatterns(input).map(scorePattern));
+  return sum(getPatterns(input).map((pattern) => scorePattern(pattern)));
 }
 
-console.log(getPart1(INPUT));
+function getPart2(input: string): number {
+  return sum(getPatterns(input).map((pattern) => scorePattern(pattern, true)));
+}
+
+console.log(getPart1(INPUT), getPart2(INPUT));
